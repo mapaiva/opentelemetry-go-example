@@ -86,7 +86,11 @@ func NewRouter() http.Handler {
 
 	githubAPI := Github{
 		HTTPClient: &http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
+			Transport: otelhttp.NewTransport(http.DefaultTransport,
+				otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+					return fmt.Sprintf("%s %s", r.Method, r.URL.String())
+				}),
+			),
 		},
 		URL: "https://api.github.com",
 	}
@@ -135,8 +139,8 @@ type Github struct {
 }
 
 func (g Github) User(ctx context.Context, username string) (map[string]interface{}, error) {
-	ctx, span := trace.SpanFromContext(ctx).Tracer().Start(ctx, "github.user")
-	defer span.End()
+	// ctx, span := trace.SpanFromContext(ctx).Tracer().Start(ctx, "github.user")
+	// defer span.End()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/users/%s", g.URL, username), nil)
 	if err != nil {
