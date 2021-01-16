@@ -12,7 +12,9 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-chi/chi"
@@ -34,7 +36,7 @@ func main() {
 	r := NewRouter()
 
 	fmt.Printf("Running at port %d...", 2021)
-	if err := http.ListenAndServe(":2021", otelhttp.NewHandler(r, "server", otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents))); err != nil {
+	if err := http.ListenAndServe(":2021", otelhttp.NewHandler(r, serviceName, otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents))); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -55,6 +57,14 @@ func NewRouter() http.Handler {
 		log.Fatal(err)
 	}
 
+	res := resource.NewWithAttributes(
+		semconv.ServiceNameKey.String(serviceName),
+		semconv.ServiceVersionKey.String(serviceName),
+		semconv.TelemetrySDKNameKey.String("opentelemetry"),
+		semconv.TelemetrySDKLanguageKey.String("go"),
+		semconv.TelemetrySDKVersionKey.String("0.16.0"),
+	)
+
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithBatcher(
@@ -62,13 +72,10 @@ func NewRouter() http.Handler {
 			sdktrace.WithBatchTimeout(5),
 			sdktrace.WithMaxExportBatchSize(10),
 		),
+		sdktrace.WithResource(res),
 	)
 
 	otel.SetTracerProvider(tp)
-
-	// tracer := otel.Tracer("test-tracer")
-	// ctx, span := tracer.Start(ctx, "CollectorExporter-Example")
-	// defer span.End()
 
 	// exporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	// if err != nil {
