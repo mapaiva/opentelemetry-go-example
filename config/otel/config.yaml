@@ -1,0 +1,38 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: :55680
+  # hostmetrics: 
+  #   collection_interval: 1m
+  #   scrapers:
+  #     load:
+  #     memory:
+
+processors:
+  batch:
+  queued_retry:
+
+exporters:
+  elastic:
+    apm_server_url: 'http://apm-server:8200'
+    insecure: true
+    # secret_token: 'APM_SERVER_SECRET_TOKEN'
+  logging:
+    loglevel: debug
+
+service:
+  pipelines:
+    # metrics:
+    #   receivers:
+    #     - otlp
+    #     - hostmetrics
+    #   exporters:
+    #     - elastic 
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - elastic 
