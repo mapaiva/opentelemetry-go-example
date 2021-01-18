@@ -6,50 +6,23 @@ import (
 	"log"
 	"net/http"
 	"opentel/clients"
+	"opentel/telemetry"
 	transportHTTP "opentel/transport/http"
-
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv"
 )
 
 const (
-	serviceName    = "otel-server"
-	serviceVersion = "0.0.1"
-	port           = "2021"
+	serviceName       = "otel-server"
+	serviceVersion    = "0.0.1"
+	collectorEndpoint = "localhost:55680"
+	port              = "2021"
 )
 
 func main() {
-	ctx := context.Background()
-
-	driver := otlpgrpc.NewDriver(otlpgrpc.WithInsecure(), otlpgrpc.WithEndpoint("localhost:55680"))
-	exporter, err := otlp.NewExporter(ctx, driver)
-	if err != nil {
+	telemetry := telemetry.New(serviceName, serviceVersion, collectorEndpoint)
+	if err := telemetry.Init(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	res := resource.NewWithAttributes(
-		semconv.ServiceNameKey.String(serviceName),
-		semconv.ServiceVersionKey.String(serviceVersion),
-		semconv.TelemetrySDKNameKey.String("opentelemetry"),
-		semconv.TelemetrySDKLanguageKey.String("go"),
-		semconv.TelemetrySDKVersionKey.String("0.16.0"),
-	)
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithBatcher(exporter,
-			sdktrace.WithBatchTimeout(5),
-			sdktrace.WithMaxExportBatchSize(10),
-		),
-		sdktrace.WithResource(res),
-	)
-
-	otel.SetTracerProvider(tp)
+	defer telemetry.Shutdown(context.Background())
 
 	githubAPI := clients.GithubAPI{
 		HTTPClient: &http.Client{
@@ -58,11 +31,13 @@ func main() {
 		URL: "https://api.github.com",
 	}
 
-	r := transportHTTP.NewRouter(githubAPI)
-	h := otelhttp.NewHandler(r, serviceName, otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents))
+	r := transportHTTP.NewRouter(
+		githubAPI,
+		serviceName,
+	)
 
 	fmt.Printf("Running at port %s...", port)
-	if err := transportHTTP.ListenAndServe(":"+port, h); err != nil {
+	if err := transportHTTP.ListenAndServe(":"+port, r); err != nil {
 		log.Fatal(err)
 	}
 }

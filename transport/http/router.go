@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"opentel/clients"
+	"opentel/telemetry"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -10,12 +11,13 @@ import (
 )
 
 // NewRouter returns an HTTP router.
-func NewRouter(githubAPI clients.GithubAPI) http.Handler {
+func NewRouter(githubAPI clients.GithubAPI, serviceName string) http.Handler {
 	r := chi.NewMux()
 
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
+	r.Use(telemetry.Midlleware(serviceName))
 
 	r.Get("/healthcheck", healthcheck)
 	r.Method(http.MethodGet, "/users/{username}", &retrieveUserHandler{githubAPI})
