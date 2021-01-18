@@ -8,6 +8,8 @@ import (
 	"opentel/clients"
 	"opentel/telemetry"
 	transportHTTP "opentel/transport/http"
+
+	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 )
 
 const (
@@ -18,6 +20,11 @@ const (
 )
 
 func main() {
+	prometheusExporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	telemetry := telemetry.New(serviceName, serviceVersion, collectorEndpoint)
 	if err := telemetry.Init(context.Background()); err != nil {
 		log.Fatal(err)
@@ -32,8 +39,9 @@ func main() {
 	}
 
 	r := transportHTTP.NewRouter(
-		githubAPI,
 		serviceName,
+		prometheusExporter,
+		githubAPI,
 	)
 
 	fmt.Printf("Running at port %s...", port)

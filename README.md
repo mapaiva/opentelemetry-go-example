@@ -14,6 +14,7 @@ Service with metrics and traces examples using Prometheus and Elastic APM.
 ```sh
 > docker-compose up -d
 > go run cmd/server/main.go
+> curl localhost:2021/users/mapaiva
 ```
 
 ## See tracing

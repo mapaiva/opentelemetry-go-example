@@ -8,10 +8,11 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 )
 
 // NewRouter returns an HTTP router.
-func NewRouter(githubAPI clients.GithubAPI, serviceName string) http.Handler {
+func NewRouter(serviceName string, prometheusExporter *prometheus.Exporter, githubAPI clients.GithubAPI) http.Handler {
 	r := chi.NewMux()
 
 	r.Use(middleware.Recoverer)
@@ -20,6 +21,7 @@ func NewRouter(githubAPI clients.GithubAPI, serviceName string) http.Handler {
 	r.Use(telemetry.Midlleware(serviceName))
 
 	r.Get("/healthcheck", healthcheck)
+	r.Method(http.MethodGet, "/metrics", prometheusExporter)
 	r.Method(http.MethodGet, "/users/{username}", &retrieveUserHandler{githubAPI})
 
 	return r
