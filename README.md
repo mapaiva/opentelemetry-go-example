@@ -1,6 +1,13 @@
-# Opentel
+# opentelemetry-go-example
 
-Tests with open telemetry
+Service with metrics and traces examples using Prometheus and Elastic APM.
+
+## Components
+
+- Elasticsearch
+- Elastic APM Server
+- Kibana
+- [opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
 
 ## Running
 
@@ -9,6 +16,6 @@ Tests with open telemetry
 > go run cmd/server/main.go
 ```
 
-## See tracing metrics
+## See tracing
 
-Open Kibana at http://localhost:5601/app/apm and configure APM Agent.
+Open Kibana at http://localhost:5601/app/apm and configure the APM Agent.
